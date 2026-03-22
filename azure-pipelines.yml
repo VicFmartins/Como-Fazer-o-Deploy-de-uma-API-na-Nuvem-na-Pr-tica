@@ -1,0 +1,82 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: Release
+  dotNetVersion: 8.0.x
+  projectPath: src/MinhaApi/MinhaApi.csproj
+
+stages:
+  - stage: Build
+    displayName: Build and Publish
+    jobs:
+      - job: Build
+        steps:
+          - task: UseDotNet@2
+            displayName: Use .NET SDK
+            inputs:
+              version: $(dotNetVersion)
+              packageType: sdk
+
+          - script: dotnet restore $(projectPath)
+            displayName: Restore
+
+          - script: dotnet build $(projectPath) --configuration $(buildConfiguration) --no-restore
+            displayName: Build
+
+          - script: dotnet publish $(projectPath) --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish --no-build
+            displayName: Publish
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish Artifact
+            inputs:
+              PathtoPublish: $(Build.ArtifactStagingDirectory)/publish
+              ArtifactName: drop
+              publishLocation: Container
+
+  - stage: DeployStaging
+    displayName: Deploy to Staging
+    dependsOn: Build
+    jobs:
+      - deployment: DeployStaging
+        environment: staging
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: drop
+                - task: AzureWebApp@1
+                  displayName: Deploy Web App to staging slot
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    appType: webApp
+                    appName: $(webAppName)
+                    package: $(Pipeline.Workspace)/drop
+                    deployToSlotOrASE: true
+                    resourceGroupName: $(resourceGroupName)
+                    slotName: staging
+
+  - stage: DeployProduction
+    displayName: Swap to Production
+    dependsOn: DeployStaging
+    jobs:
+      - deployment: DeployProduction
+        environment: production
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureAppServiceManage@0
+                  displayName: Swap staging with production
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    Action: Swap Slots
+                    WebAppName: $(webAppName)
+                    ResourceGroupName: $(resourceGroupName)
+                    SourceSlot: staging
