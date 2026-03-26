@@ -113,7 +113,7 @@ Depois disso:
 
 ## Pipeline Azure DevOps
 
-O arquivo [azure-pipelines.yml](C:/Users/vitor/OneDrive/Documentos/Playground/repo-deploy-api-nuvem/azure-pipelines.yml) já traz um fluxo base com:
+O arquivo [azure-pipelines.yml](azure-pipelines.yml) já traz um fluxo base com:
 
 1. restore e build da API;
 2. publish do artefato;
@@ -128,7 +128,7 @@ Variáveis esperadas no pipeline:
 
 ## Infraestrutura como Código
 
-O arquivo [appservice.bicep](C:/Users/vitor/OneDrive/Documentos/Playground/repo-deploy-api-nuvem/infra/appservice.bicep) provisiona:
+O arquivo [appservice.bicep](infra/appservice.bicep) provisiona:
 
 - App Service Plan
 - Web App
